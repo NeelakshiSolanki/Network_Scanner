@@ -15,9 +15,9 @@ It scans a specified subnet range and lists **online** and **offline** hosts alo
 ---
 
 ## 🖼️ Screenshot
-![NetAnalyzer UI](https://github.com/NeelakshiSolanki/Network_Scanner/blob/5bd69fd52030fd40e06e11b587fe717df017affc/Screenshot%202025-08-04%20154020.png)
 
 ---
+<img width="1088" height="823" alt="Screenshot 2025-08-04 154020" src="https://github.com/user-attachments/assets/d6af0067-79dc-46c7-8936-bec23fd3f593" />
 
 ## ⚙️ Requirements
 - **Java 8 or higher**  
