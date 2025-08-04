@@ -73,10 +73,13 @@ public class NetworkScanner {
                         long startTime = System.currentTimeMillis();
                         boolean reachable = address.isReachable(500);
                         long latency = System.currentTimeMillis() - startTime;
-                        String hostname = address.getCanonicalHostName();
+
+                        String hostname = resolveHostname(ip, address);
                         String status = reachable ? "Online" : "Offline";
+
                         String[] row = new String[]{ip, status, hostname, String.valueOf(latency)};
                         lastScanResults.add(row);
+
                         return String.format("{\"ip\":\"%s\",\"status\":\"%s\",\"hostname\":\"%s\",\"latency\":%d}",
                                 ip, status, hostname, latency);
                     } catch (IOException e) {
@@ -127,6 +130,36 @@ public class NetworkScanner {
                 if (parts.length == 2) map.put(parts[0], parts[1]);
             }
             return map;
+        }
+
+        // ✅ New hostname resolution method
+        private String resolveHostname(String ip, InetAddress address) {
+            try {
+                String hostname = address.getCanonicalHostName();
+                if (hostname.equals(ip) || hostname.equalsIgnoreCase("localhost")) {
+                    hostname = getNetBIOSName(ip);
+                }
+                if (hostname == null || hostname.trim().isEmpty() || hostname.equals(ip)) {
+                    hostname = "Unknown";
+                }
+                return hostname;
+            } catch (Exception e) {
+                return "Unknown";
+            }
+        }
+
+        private String getNetBIOSName(String ip) {
+            try {
+                Process p = Runtime.getRuntime().exec("nbtstat -A " + ip);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("<20>")) {
+                        return line.trim().split("\\s+")[0];
+                    }
+                }
+            } catch (Exception ignored) {}
+            return null;
         }
     }
 }
