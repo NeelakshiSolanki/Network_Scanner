@@ -15,7 +15,7 @@ It scans a specified subnet range and lists **online** and **offline** hosts alo
 ---
 
 ## 🖼️ Screenshot
-![NetAnalyzer UI](./screenshot.png)
+![NetAnalyzer UI](https://github.com/NeelakshiSolanki/Network_Scanner/blob/5bd69fd52030fd40e06e11b587fe717df017affc/Screenshot%202025-08-04%20154020.png)
 
 ---
 
