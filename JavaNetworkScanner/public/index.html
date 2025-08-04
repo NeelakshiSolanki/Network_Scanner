@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NetAnalyzer – Smart Network Scanner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 950px;
+      margin: auto;
+      padding-bottom: 60px;
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: -100px;
+      background: rgba(0, 136, 255, 0.1);
+      border-radius: 50%;
+      animation: floatAndSlide 18s linear infinite;
+      z-index: -1;
+    }
+    .bubble:nth-child(1) { left: 2%; width: 80px; height: 80px; animation-delay: 0s; }
+    .bubble:nth-child(2) { left: 10%; width: 100px; height: 100px; animation-delay: 3s; }
+    .bubble:nth-child(3) { left: 25%; width: 90px; height: 90px; animation-delay: 5s; }
+    .bubble:nth-child(4) { left: 45%; width: 120px; height: 120px; animation-delay: 7s; }
+    .bubble:nth-child(5) { left: 65%; width: 85px; height: 85px; animation-delay: 4s; }
+    .bubble:nth-child(6) { left: 80%; width: 95px; height: 95px; animation-delay: 6s; }
+
+    @keyframes floatAndSlide {
+      0% { transform: translate(0, 0); opacity: 0.3; }
+      25% { transform: translate(15vw, -25vh); opacity: 0.5; }
+      50% { transform: translate(-15vw, -50vh); opacity: 0.7; }
+      75% { transform: translate(10vw, -75vh); opacity: 0.5; }
+      100% { transform: translate(0, -100vh); opacity: 0; }
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .input-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    input, button, select {
+      padding: 10px;
+      border-radius: 25px;
+      border: none;
+      font-size: 16px;
+    }
+
+    input, select {
+      background: #1e1e2e;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    button {
+      background: linear-gradient(45deg, #0e869ea1, #0777a73f);
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #9ae9ff55;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      box-shadow: 0 0 20px #0323435f;
+      transform: scale(1.05);
+    }
+
+    #circle-progress {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: conic-gradient(
+        #0e869e 0% 0%,
+        #0e3246 0% 100%
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin: 30px auto;
+      box-shadow: 0 0 15px #66ffff55;
+    }
+
+    #progress-text {
+      position: absolute;
+      text-align: center;
+      font-size: 18px;
+      line-height: 1.5;
+      color: #ffffff;
+    }
+
+    #summary {
+      font-size: 18px;
+      margin: 15px 0;
+      text-align: center;
+    }
+
+    ul {
+      list-style: none;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+
+    li {
+      margin: 8px 0;
+      font-weight: 500;
+      color: #eef;
+    }
+  </style>
+</head>
+<body>
+  <div class="bubble"></div>
+  <div class="bubble"></div>
+  <div class="bubble"></div>
+  <div class="bubble"></div>
+  <div class="bubble"></div>
+  <div class="bubble"></div>
+
+  <div class="container">
+    <h2>NetAnalyzer – Smart Network Scanner</h2>
+
+    <div class="input-area">
+      <input type="text" id="subnet" placeholder="Subnet (e.g. 192.168.0)" />
+      <input type="number" id="startRange" value="1" min="1" max="254" />
+      to
+      <input type="number" id="endRange" value="20" min="1" max="254" />
+      <select id="filter">
+        <option value="all">All</option>
+        <option value="online">Online Only</option>
+        <option value="offline">Offline Only</option>
+      </select>
+      <button onclick="startScan()">Start Scan</button>
+      <button onclick="downloadResult()">Download</button>
+    </div>
+
+    <div id="circle-progress">
+      <div id="progress-text">0% Online<br>0% Offline</div>
+    </div>
+
+    <h4 id="summary"></h4>
+    <ul id="resultList"></ul>
+  </div>
+
+  <script>
+    let rawResults = [];
+
+    function updateCircularSplit(onlinePercent, offlinePercent) {
+      const circle = document.getElementById("circle-progress");
+      const text = document.getElementById("progress-text");
+      circle.style.background = `conic-gradient(
+        #0e869e 0% ${onlinePercent}%,
+        #0e3246 ${onlinePercent}% 100%
+      )`;
+      text.innerHTML = `${onlinePercent}% Online<br>${offlinePercent}% Offline`;
+    }
+
+    function renderResults(filter) {
+      const resultList = document.getElementById("resultList");
+      resultList.innerHTML = "";
+      rawResults.forEach(item => {
+        if (filter === "all" || filter === item.status.toLowerCase()) {
+          const li = document.createElement("li");
+          const hostnameText = item.hostname && item.hostname !== item.ip ? item.hostname : "Unknown";
+          li.innerHTML = `<strong>${item.ip}</strong> → ${item.status}
+            <br><small>Hostname: ${hostnameText}</small>
+            <br><small>Latency: ${item.latency}ms</small>`;
+          resultList.appendChild(li);
+        }
+      });
+    }
+
+    document.getElementById("filter").addEventListener("change", e => {
+      renderResults(e.target.value);
+    });
+
+    async function startScan() {
+      const subnet = document.getElementById("subnet").value.trim();
+      const start = parseInt(document.getElementById("startRange").value);
+      const end = parseInt(document.getElementById("endRange").value);
+
+      if (!subnet || start > end) {
+        alert("Please enter a valid subnet and range.");
+        return;
+      }
+
+      const summary = document.getElementById("summary");
+      rawResults = [];
+      updateCircularSplit(0, 0);
+      document.getElementById("resultList").innerHTML = "Scanning...";
+
+      try {
+        const res = await fetch(`http://localhost:8080/scan?subnet=${subnet}&start=${start}&end=${end}`);
+        const data = await res.json();
+        const total = data.results.length;
+        let online = 0;
+        let totalLatency = 0;
+
+        rawResults = data.results;
+        data.results.forEach((item) => {
+          if (item.status === "Online") online++;
+          totalLatency += item.latency || 0;
+        });
+
+        const offline = total - online;
+        const onlinePercent = Math.round((online / total) * 100);
+        const offlinePercent = 100 - onlinePercent;
+        const avgLatency = total > 0 ? Math.round(totalLatency / total) : 0;
+
+        updateCircularSplit(onlinePercent, offlinePercent);
+        summary.textContent = `Online: ${online} (${onlinePercent}%) | Offline: ${offline} (${offlinePercent}%) | Avg Latency: ${avgLatency}ms | Total Scanned: ${total}`;
+        renderResults(document.getElementById("filter").value);
+      } catch (err) {
+        alert("Failed to scan. Backend not responding.");
+        console.error(err);
+      }
+    }
+
+    function downloadResult() {
+      window.open("http://localhost:8080/download");
+    }
+  </script>
+</body>
+</html>
